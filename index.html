@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Square Image Maker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: 'Sarabun', sans-serif;
+        background-color: #f3f4f6;
+      }
+      .drop-zone {
+        border: 2px dashed #cbd5e1;
+        transition: all 0.3s ease;
+      }
+      .drop-zone.dragover {
+        border-color: #3b82f6;
+        background-color: #eff6ff;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen flex flex-col items-center py-10 px-4">
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-gray-800 mb-2">Square Image Maker</h1>
+      <p class="text-gray-600">
+        เติมขอบขาวให้รูปภาพเป็นสัดส่วน 1:1 โดยไม่ตัดส่วนใดออก
+      </p>
+    </div>
+
+    <!-- Main Card -->
+    <div
+      class="bg-white rounded-xl shadow-lg p-6 w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8"
+    >
+      <!-- Input Section -->
+      <div class="flex flex-col space-y-4">
+        <h2
+          class="text-xl font-semibold text-gray-700 border-l-4 border-blue-500 pl-3"
+        >
+          1. อัปโหลดรูปภาพ
+        </h2>
+
+        <div
+          id="dropZone"
+          class="drop-zone rounded-lg h-64 flex flex-col items-center justify-center cursor-pointer bg-gray-50 relative overflow-hidden group"
+        >
+          <input
+            type="file"
+            id="fileInput"
+            accept="image/*"
+            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+          />
+
+          <div
+            class="text-center p-4 transition-opacity group-hover:opacity-75"
+            id="uploadPrompt"
+          >
+            <div
+              class="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4"
+            >
+              <i class="fas fa-cloud-upload-alt text-2xl"></i>
+            </div>
+            <p class="text-gray-700 font-medium">คลิกเพื่อเลือกรูปภาพ</p>
+            <p class="text-sm text-gray-500 mt-1">หรือลากไฟล์มาวางที่นี่</p>
+          </div>
+
+          <img
+            id="previewOriginal"
+            class="hidden max-h-full max-w-full object-contain z-0"
+            alt="Original Preview"
+          />
+        </div>
+
+        <div
+          class="bg-blue-50 text-blue-700 p-3 rounded-lg text-sm flex items-start"
+        >
+          <i class="fas fa-info-circle mt-1 mr-2 flex-shrink-0"></i>
+          <span
+            >ระบบจะคำนวณขนาดด้านที่ยาวที่สุด
+            แล้วเติมพื้นหลังให้เต็มเป็นสี่เหลี่ยมจัตุรัส</span
+          >
+        </div>
+      </div>
+
+      <!-- Output Section -->
+      <div class="flex flex-col space-y-4">
+        <h2
+          class="text-xl font-semibold text-gray-700 border-l-4 border-green-500 pl-3"
+        >
+          2. ผลลัพธ์
+        </h2>
+
+        <div
+          class="relative bg-gray-100 rounded-lg h-64 flex items-center justify-center overflow-hidden border border-gray-200"
+        >
+          <!-- Canvas is hidden but used for processing -->
+          <canvas id="canvas" class="hidden"></canvas>
+          <!-- Image tag to show the result -->
+          <img
+            id="resultImage"
+            class="max-h-full max-w-full object-contain shadow-md hidden"
+            alt="Result Image"
+          />
+
+          <div id="emptyState" class="text-gray-400 text-center">
+            <i class="fas fa-image text-4xl mb-2"></i>
+            <p>รอรูปภาพ...</p>
+          </div>
+        </div>
+
+        <!-- Options -->
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+          <label class="block text-sm font-medium text-gray-700 mb-2"
+            >สีพื้นหลัง (Background Color)</label
+          >
+          <div class="flex items-center space-x-3">
+            <input
+              type="color"
+              id="bgColor"
+              value="#ffffff"
+              class="h-10 w-14 p-1 rounded cursor-pointer border border-gray-300"
+            />
+            <span id="colorHex" class="text-gray-600 font-mono text-sm"
+              >#FFFFFF</span
+            >
+            <button
+              id="resetColor"
+              class="text-xs text-blue-500 hover:text-blue-700 underline ml-auto"
+            >
+              ใช้สีขาว
+            </button>
+          </div>
+        </div>
+
+        <button
+          id="downloadBtn"
+          disabled
+          class="w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-semibold shadow-sm transition-all flex items-center justify-center gap-2 cursor-not-allowed"
+        >
+          <i class="fas fa-download"></i>
+          ดาวน์โหลดรูปภาพ
+        </button>
+      </div>
+    </div>
+
+    <!-- Instructions / Footer -->
+    <div class="mt-8 text-center text-gray-500 text-sm max-w-lg">
+      <p>
+        การประมวลผลทำในเบราว์เซอร์ของคุณ 100% รูปภาพไม่ได้ถูกส่งไปยังเซิร์ฟเวอร์
+      </p>
+    </div>
+
+    <script>
+      const fileInput = document.getElementById('fileInput');
+      const dropZone = document.getElementById('dropZone');
+      const uploadPrompt = document.getElementById('uploadPrompt');
+      const previewOriginal = document.getElementById('previewOriginal');
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const resultImage = document.getElementById('resultImage');
+      const emptyState = document.getElementById('emptyState');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const bgColorInput = document.getElementById('bgColor');
+      const colorHexDisplay = document.getElementById('colorHex');
+      const resetColorBtn = document.getElementById('resetColor');
+
+      let currentImg = new Image();
+      let fileName = 'image';
+
+      // Event Listeners for Drag & Drop
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      });
+
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+          handleFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+          handleFile(e.target.files[0]);
+        }
+      });
+
+      bgColorInput.addEventListener('input', (e) => {
+        colorHexDisplay.textContent = e.target.value.toUpperCase();
+        if (currentImg.src) {
+          processImage();
+        }
+      });
+
+      resetColorBtn.addEventListener('click', () => {
+        bgColorInput.value = '#ffffff';
+        colorHexDisplay.textContent = '#FFFFFF';
+        if (currentImg.src) {
+          processImage();
+        }
+      });
+
+      function handleFile(file) {
+        if (!file.type.startsWith('image/')) {
+          alert('กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น');
+          return;
+        }
+
+        fileName = file.name.split('.')[0];
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+          currentImg = new Image();
+          currentImg.onload = () => {
+            // Show original preview
+            previewOriginal.src = e.target.result;
+            previewOriginal.classList.remove('hidden');
+            uploadPrompt.classList.add('hidden');
+
+            processImage();
+          };
+          currentImg.src = e.target.result;
+        };
+
+        reader.readAsDataURL(file);
+      }
+
+      function processImage() {
+        // Calculate square size
+        const size = Math.max(currentImg.width, currentImg.height);
+
+        // Set canvas size
+        canvas.width = size;
+        canvas.height = size;
+
+        // Fill background
+        ctx.fillStyle = bgColorInput.value;
+        ctx.fillRect(0, 0, size, size);
+
+        // Calculate position to center image
+        const x = (size - currentImg.width) / 2;
+        const y = (size - currentImg.height) / 2;
+
+        // Draw image
+        ctx.drawImage(currentImg, x, y);
+
+        // Show result
+        resultImage.src = canvas.toDataURL('image/png');
+        resultImage.classList.remove('hidden');
+        emptyState.classList.add('hidden');
+
+        // Enable download
+        downloadBtn.disabled = false;
+        downloadBtn.classList.remove(
+          'bg-gray-300',
+          'text-gray-500',
+          'cursor-not-allowed'
+        );
+        downloadBtn.classList.add(
+          'bg-green-500',
+          'text-white',
+          'hover:bg-green-600',
+          'shadow-md'
+        );
+
+        downloadBtn.onclick = () => {
+          const link = document.createElement('a');
+          link.download = `${fileName}_1x1.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        };
+      }
+    </script>
+  </body>
+</html>
